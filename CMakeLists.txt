@@ -10,13 +10,11 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Qt5 bileşenlerini bul
 find_package(Qt5 REQUIRED COMPONENTS Widgets Network)
 
-# Resource dosyaları
+
 qt5_add_resources(GENERATED_RESOURCES ConnectionTool.qrc)
 
-# Windows için ikon
 set(APP_ICON_RESOURCE_WINDOWS "appicon.rc")
 
 # Kaynak dosyalar

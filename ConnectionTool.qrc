@@ -2,4 +2,8 @@
     <qresource prefix="/">
         <file>logo.png</file>
     </qresource>
+    <qresource prefix="/certs">
+        <file>certs/cert.pem</file>
+        <file>certs/key.pem</file>
+    </qresource>
 </RCC>

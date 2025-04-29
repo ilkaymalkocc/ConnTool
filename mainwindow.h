@@ -4,6 +4,9 @@
 #include <QMainWindow>
 #include <QTcpServer>
 #include <QTcpSocket>
+#include <QSslSocket>
+#include <QSslKey>
+#include <QSslCertificate>
 
 namespace Ui {
 class MainWindow;
@@ -34,7 +37,7 @@ private slots:
 private:
     Ui::MainWindow *ui;
     QTcpServer *server = nullptr;
-    QTcpSocket *clientSocket = nullptr;
+    QSslSocket* clientSocket;
     bool alreadyOpened = false;
     QTimer *repeatTimer;
     int repeatRemaining;

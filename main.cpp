@@ -1,6 +1,7 @@
 #include <QApplication>
 #include <QSplashScreen>
 #include "mainwindow.h"
+#include <QSslSocket>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -14,7 +15,8 @@ int main(int argc, char *argv[])
 #else
     QApplication app(argc, argv);
 #endif
-
+    QCoreApplication::addLibraryPath("./");
+     QCoreApplication::addLibraryPath("C:/OpenSSL-Win64/bin");
     QPixmap pix(":logo.png");
     QSplashScreen splash(pix, Qt::WindowStaysOnTopHint);
     splash.show();

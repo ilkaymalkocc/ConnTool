@@ -10,6 +10,7 @@
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <QTimer>
+#include <QSslConfiguration>
 
 MainWindow::MainWindow(QWidget *parent): QMainWindow(parent),
  ui(new Ui::MainWindow),
@@ -51,6 +52,11 @@ MainWindow::~MainWindow()
 
 void MainWindow::on_actionOpen_Connection_triggered()
 {
+    qDebug() << "Current working dir:" << QDir::currentPath();
+
+    if (!QFile::exists("certs/cert.pem") || !QFile::exists("certs/key.pem")) {
+        QMessageBox::critical(this, "Error", "Certificate or Key file missing! Make sure certs/cert.pem and certs/key.pem exist next to the executable.");
+    }
     ui->actionOpen_Connection->setEnabled(false);
 
     if (alreadyOpened)
@@ -83,22 +89,48 @@ void MainWindow::on_actionOpen_Connection_triggered()
                                     + QString::number(port));
                 alreadyOpened = true;
             }
-        } else {
-            clientSocket = new QTcpSocket(this);
-            connect(clientSocket, &QTcpSocket::connected,
-                    this, &MainWindow::onConnected);
-            connect(clientSocket, &QTcpSocket::readyRead,
-                    this, &MainWindow::onReadyRead);
-            connect(clientSocket, &QTcpSocket::disconnected,
-                    this, &MainWindow::onClientDisconnected);
-
-            clientSocket->connectToHost(ipAddress, port);
         }
+        else
+        {
+            QSslSocket *sslSocket = new QSslSocket(this);
+            clientSocket = sslSocket;
 
-        activateWindow();
-        raise();
-    }
+            QFile certFile("C:/Users/PC/OneDrive/Belgeler/Development/build-ConnectionTool-Desktop_Qt_5_15_2_MinGW_64_bit-Debug/certs/cert.pem");
+            QFile keyFile("C:/Users/PC/OneDrive/Belgeler/Development/build-ConnectionTool-Desktop_Qt_5_15_2_MinGW_64_bit-Debug/certs/key.pem");
+
+            if (certFile.open(QIODevice::ReadOnly)) {
+                QSslCertificate certificate(&certFile, QSsl::Pem);
+                sslSocket->setLocalCertificate(certificate);
+                certFile.close();
+                qDebug() << "Certificate loaded from disk.";
+            } else {
+                qDebug() << "Certificate file cannot be opened!";
+            }
+
+            if (keyFile.open(QIODevice::ReadOnly)) {
+                QSslKey privateKey(&keyFile, QSsl::Rsa, QSsl::Pem);
+                sslSocket->setPrivateKey(privateKey);
+                keyFile.close();
+                qDebug() << "Private key loaded from disk.";
+                sslSocket->setPeerVerifyMode(QSslSocket::VerifyNone);
+
+            } else {
+                qDebug() << "Private key file cannot be opened!";
+            }
+
+            connect(sslSocket, &QSslSocket::encrypted, this, &MainWindow::onConnected);
+            connect(sslSocket, &QSslSocket::readyRead, this, &MainWindow::onReadyRead);
+            connect(sslSocket, &QSslSocket::disconnected, this, &MainWindow::onClientDisconnected);
+
+
+
+            QSslConfiguration sslConfig = sslSocket->sslConfiguration();
+            sslConfig.setProtocol(QSsl::TlsV1_2OrLater);
+            sslSocket->setSslConfiguration(sslConfig);
+            sslSocket->connectToHostEncrypted(ipAddress, port);
 }
+   }
+    }
 void MainWindow::on_repeatButton_clicked()
 {
     repeatRemaining = ui->spinBox->value();
@@ -213,6 +245,7 @@ void MainWindow::onDisconnectButtonClicked()
     }
 
     alreadyOpened = false;
+    ui->actionOpen_Connection->setEnabled(true);
     QString timestamp = QDateTime::currentDateTime()
                         .toString("yyyy-MM-dd HH:mm:ss");
     ui->logText->append("[" + timestamp + "] Connection manually closed!");
@@ -220,14 +253,26 @@ void MainWindow::onDisconnectButtonClicked()
 
 void MainWindow::onNewConnection()
 {
-    clientSocket = server->nextPendingConnection();
-    connect(clientSocket, &QTcpSocket::readyRead,
-            this, &MainWindow::onReadyRead);
-    connect(clientSocket, &QTcpSocket::disconnected,
-            this, &MainWindow::onClientDisconnected);
+    QSslSocket *sslSocket = new QSslSocket(this);
+    clientSocket = sslSocket;
+
+    QTcpSocket *pendingSocket = server->nextPendingConnection();
+    sslSocket->setSocketDescriptor(pendingSocket->socketDescriptor());
+
+    connect(sslSocket, &QSslSocket::encrypted, this, &MainWindow::onConnected);
+    connect(sslSocket, &QSslSocket::readyRead, this, &MainWindow::onReadyRead);
+    connect(sslSocket, &QSslSocket::disconnected, this, &MainWindow::onClientDisconnected);
+    connect(sslSocket, QOverload<const QList<QSslError>&>::of(&QSslSocket::sslErrors),
+            this, [=](const QList<QSslError> &errors) {
+                for (const QSslError &error : errors)
+                    qDebug() << "SSL Error:" << error.errorString();
+                sslSocket->ignoreSslErrors();
+            });
+
+    sslSocket->startServerEncryption();
 
     QString timestamp = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss");
-    ui->logText->append("[" + timestamp + "] New connection opened!");
+    ui->logText->append("[" + timestamp + "] New SSL connection opened!");
 }
 
 void MainWindow::onConnected()
@@ -272,4 +317,5 @@ void MainWindow::onClientDisconnected()
     }
 
     alreadyOpened = false;
+    ui->actionOpen_Connection->setEnabled(true);
 }

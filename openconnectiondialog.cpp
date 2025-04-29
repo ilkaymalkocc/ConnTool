@@ -42,7 +42,7 @@ Dialog::Dialog(QWidget *parent) :
 Dialog::~Dialog()
 {
     delete ui;
-    ui = nullptr; // güvenlik için
+    ui = nullptr;
 
 }
 
