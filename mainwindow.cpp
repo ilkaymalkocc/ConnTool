@@ -213,6 +213,8 @@ void MainWindow::onDisconnectButtonClicked()
     }
 
     alreadyOpened = false;
+    ui->actionOpen_Connection->setEnabled(true);
+
     QString timestamp = QDateTime::currentDateTime()
                         .toString("yyyy-MM-dd HH:mm:ss");
     ui->logText->append("[" + timestamp + "] Connection manually closed!");
@@ -272,4 +274,5 @@ void MainWindow::onClientDisconnected()
     }
 
     alreadyOpened = false;
+    ui->actionOpen_Connection->setEnabled(true);
 }
